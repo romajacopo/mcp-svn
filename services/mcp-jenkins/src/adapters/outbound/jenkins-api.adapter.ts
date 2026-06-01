@@ -15,6 +15,18 @@ export class JenkinsApiAdapter implements JenkinsClientPort {
     this.authHeader = "Basic " + Buffer.from(`${config.user}:${config.token}`).toString("base64");
   }
 
+  /**
+   * Build the URL path prefix for a job, supporting Jenkins folders.
+   * "a/b/c" → "/job/a/job/b/job/c" (each segment encoded individually).
+   */
+  private jobPath(jobName: string): string {
+    return jobName
+      .split("/")
+      .filter(Boolean)
+      .map((seg) => `/job/${encodeURIComponent(seg)}`)
+      .join("");
+  }
+
   async getJobs(): Promise<string[]> {
     const data = await this.request<{ jobs: { name: string }[] }>("/api/json?tree=jobs[name]");
     return data.jobs.map((j) => j.name);
@@ -22,21 +34,21 @@ export class JenkinsApiAdapter implements JenkinsClientPort {
 
   async getBuild(jobName: string, buildNumber: number): Promise<BuildInfo> {
     const data = await this.request<JenkinsBuildResponse>(
-      `/job/${encodeURIComponent(jobName)}/${buildNumber}/api/json`
+      `${this.jobPath(jobName)}/${buildNumber}/api/json`
     );
     return this.mapBuild(jobName, data);
   }
 
   async getLastBuild(jobName: string): Promise<BuildInfo> {
     const data = await this.request<JenkinsBuildResponse>(
-      `/job/${encodeURIComponent(jobName)}/lastBuild/api/json`
+      `${this.jobPath(jobName)}/lastBuild/api/json`
     );
     return this.mapBuild(jobName, data);
   }
 
   async getFailedBuilds(jobName: string, limit = 10): Promise<BuildInfo[]> {
     const data = await this.request<{ builds: JenkinsBuildResponse[] }>(
-      `/job/${encodeURIComponent(jobName)}/api/json?tree=builds[number,result,timestamp,duration,url]{0,${limit}}`
+      `${this.jobPath(jobName)}/api/json?tree=builds[number,result,timestamp,duration,url]{0,${limit}}`
     );
     return data.builds
       .filter((b) => b.result === "FAILURE")
@@ -44,7 +56,7 @@ export class JenkinsApiAdapter implements JenkinsClientPort {
   }
 
   async getBuildLog(jobName: string, buildNumber: number): Promise<string> {
-    const url = `${this.config.baseUrl}/job/${encodeURIComponent(jobName)}/${buildNumber}/consoleText`;
+    const url = `${this.config.baseUrl}${this.jobPath(jobName)}/${buildNumber}/consoleText`;
     const res = await fetch(url, { headers: { Authorization: this.authHeader } });
     if (!res.ok) throw new NotFoundError("BuildLog", `${jobName}#${buildNumber}`);
     return res.text();
@@ -53,7 +65,7 @@ export class JenkinsApiAdapter implements JenkinsClientPort {
   async getBuildTestReport(jobName: string, buildNumber: number): Promise<TestReport | null> {
     try {
       const data = await this.request<JenkinsTestReport>(
-        `/job/${encodeURIComponent(jobName)}/${buildNumber}/testReport/api/json`
+        `${this.jobPath(jobName)}/${buildNumber}/testReport/api/json`
       );
       return {
         totalCount: data.totalCount,
