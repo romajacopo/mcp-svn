@@ -4,7 +4,7 @@
       "command": "node",
       "args": ["services/mcp-jenkins/dist/index.js"],
       "env": {
-        "JENKINS_URL": "https://jenkins-eks-dev-cpm-trk.platformteam.saastagetik.internal",
+        "JENKINS_URL": "https://jenkins.your-company.com",
         "JENKINS_USER": "${JENKINS_USER}",
         "JENKINS_TOKEN": "${JENKINS_TOKEN}",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0"
@@ -23,7 +23,7 @@
       "command": "node",
       "args": ["services/mcp-svn/dist/index.js"],
       "env": {
-        "SVN_URL": "svn://linux02.platformteam.saastagetik.internal/Dev/solutions/cpm",
+        "SVN_URL": "svn://svn.your-company.com/path/to/repo",
         "SVN_USER": "${SVN_USER}",
         "SVN_PASSWORD": "${SVN_PASSWORD}"
       }
@@ -41,7 +41,7 @@
       "command": "npx",
       "args": ["tsx", "services/mcp-orchestrator/src/index.ts"],
       "env": {
-        "JENKINS_URL": "https://jenkins-eks-dev-cpm-trk.platformteam.saastagetik.internal",
+        "JENKINS_URL": "https://jenkins.your-company.com",
         "JENKINS_USER": "${JENKINS_USER}",
         "JENKINS_TOKEN": "${JENKINS_TOKEN}",
         "NODE_TLS_REJECT_UNAUTHORIZED": "0",
@@ -49,7 +49,7 @@
         "JIRA_USER": "admin",
         "JIRA_TOKEN": "${JIRA_TOKEN}",
         "JIRA_PROJECT": "EAR",
-        "SVN_URL": "svn://linux02.platformteam.saastagetik.internal/Dev/solutions/cpm",
+        "SVN_URL": "svn://svn.your-company.com/path/to/repo",
         "SVN_USER": "${SVN_USER}",
         "SVN_PASSWORD": "${SVN_PASSWORD}",
         "NEO4J_URI": "bolt://localhost:7687",

@@ -228,22 +228,21 @@ The orchestrator returns:
 
 ### Worked example — what this stack found in practice
 A real run against a corporate `smoke-test/...-spring-context-bean-loading`
-build flagged a single failing JUnit test
-(`SpringWebAppContextBeanLoadingSmokeIT.checkCoherenceBetween$ALLAnd$AUDITRole`)
-which only said *"module SOLUTIONS_PARAM is present in `$ALL` but missing in
-`$AUDIT`"*. The pipeline:
+build flagged a single failing JUnit test whose assertion only said
+*"module `X` is present in role `$ALL` but missing in role `$AUDIT`"*.
+The pipeline:
 
 1. parsed the Jenkins `testReport` and surfaced the failing class & assertion;
-2. checked the build history: previous build green at SVN r663219, current red
-   at r663223 — so the breaking change is in the four commits in between;
+2. checked the build history: previous build green at SVN r*N*, current red
+   at r*N+4* — so the breaking change is in the four commits in between;
 3. queried `svn log -v` at the **repo root** (the build's own module had *"no
    changes since previous build"*, the breakage was transitive);
-4. spotted that `bom-int/pom.xml` bumped `tgk-userprovisioning` 21.40.2 → 21.40.3;
-5. diffed the tag → exactly one file changed: `AllRoleRegisterLoader.java` added
-   a `SOLUTIONS_PARAM` grant to `$ALL`, with no matching change in
-   `AuditRoleRegisterLoader.java`;
-6. **suggested fix** = add the same `grants.add(new GrantWrapper(false, "2",
-   "SOLUTIONS_PARAM"))` line to `AuditRoleRegisterLoader.java`.
+4. spotted that a shared `bom/pom.xml` bumped one library from `x.y.2` → `x.y.3`;
+5. diffed the tag → exactly one file changed in that library: a
+   `*AllRoleRegisterLoader.java` that added a grant for module `X` to role
+   `$ALL`, with no matching change in `*AuditRoleRegisterLoader.java`;
+6. **suggested fix** = add the same `grants.add(...)` line for module `X` to
+   `*AuditRoleRegisterLoader.java`.
 
 That whole chain — *failing JUnit assertion → blame on a BOM bump that pulled a
 release whose only diff was a missing symmetric grant* — is what the orchestrator
