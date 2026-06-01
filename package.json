@@ -1,0 +1,25 @@
+{
+  "name": "ear-build-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "test:watch": "vitest",
+    "demo": "tsx demo/run-demo.ts",
+    "validate:neo4j": "tsx scripts/validate-neo4j.ts",
+    "validate:jenkins": "tsx scripts/validate-jenkins.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "neo4j-driver": "^5.28.3"
+  }
+}

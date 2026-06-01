@@ -1,0 +1,222 @@
+version: "3.9"
+
+x-mcp-service: &mcp-defaults
+  restart: unless-stopped
+  networks:
+    - mcp-net
+  environment:
+    NODE_ENV: production
+    LOG_LEVEL: info
+
+services:
+  # ─── Infrastructure ────────────────────────────────────────────────────────────
+
+  jenkins:
+    build:
+      context: ./infrastructure/jenkins
+      dockerfile: Dockerfile
+    container_name: ear-jenkins
+    ports:
+      - "${JENKINS_PORT:-8080}:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./infrastructure/jenkins/casc.yaml:/var/jenkins_home/casc.yaml
+    environment:
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
+      CASC_JENKINS_CONFIG: /var/jenkins_home/casc.yaml
+    networks:
+      - mcp-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  jira:
+    image: atlassian/jira-software:9.12
+    container_name: ear-jira
+    ports:
+      - "8090:8080"
+    volumes:
+      - jira_home:/var/atlassian/application-data/jira
+    environment:
+      ATL_JDBC_URL: jdbc:postgresql://jira-db:5432/jira
+      ATL_JDBC_USER: jira
+      ATL_JDBC_PASSWORD: ${JIRA_DB_PASSWORD:-jira_secret}
+      ATL_DB_DRIVER: org.postgresql.Driver
+      ATL_DB_TYPE: postgres72
+      JVM_MINIMUM_MEMORY: 1024m
+      JVM_MAXIMUM_MEMORY: 2048m
+    depends_on:
+      jira-db:
+        condition: service_healthy
+    networks:
+      - mcp-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/status"]
+      interval: 30s
+      timeout: 15s
+      retries: 10
+      start_period: 120s
+
+  jira-db:
+    image: postgres:15-alpine
+    container_name: ear-jira-db
+    environment:
+      POSTGRES_DB: jira
+      POSTGRES_USER: jira
+      POSTGRES_PASSWORD: ${JIRA_DB_PASSWORD:-jira_secret}
+    volumes:
+      - jira_db_data:/var/lib/postgresql/data
+    networks:
+      - mcp-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jira"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  svn:
+    build:
+      context: ./infrastructure/svn
+      dockerfile: Dockerfile
+    container_name: ear-svn
+    ports:
+      - "3690:3690"
+      - "8443:443"
+    volumes:
+      - svn_repos:/var/svn/repos
+    networks:
+      - mcp-net
+    healthcheck:
+      test: ["CMD", "svn", "info", "svn://localhost/test-repo", "--non-interactive"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: ear-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-graphify_secret}
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - mcp-net
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─── MCP Services ──────────────────────────────────────────────────────────────
+
+  mcp-jenkins:
+    <<: *mcp-defaults
+    build:
+      context: .
+      dockerfile: services/mcp-jenkins/Dockerfile
+    container_name: ear-mcp-jenkins
+    ports:
+      - "3001:3000"
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_USER: ${JENKINS_USER:-admin}
+      JENKINS_TOKEN: ${JENKINS_TOKEN}
+    depends_on:
+      jenkins:
+        condition: service_healthy
+
+  mcp-jira:
+    <<: *mcp-defaults
+    build:
+      context: .
+      dockerfile: services/mcp-jira/Dockerfile
+    container_name: ear-mcp-jira
+    ports:
+      - "3002:3000"
+    environment:
+      JIRA_URL: http://jira:8080
+      JIRA_USER: ${JIRA_USER:-admin}
+      JIRA_TOKEN: ${JIRA_TOKEN}
+    depends_on:
+      jira:
+        condition: service_healthy
+
+  mcp-svn:
+    <<: *mcp-defaults
+    build:
+      context: .
+      dockerfile: services/mcp-svn/Dockerfile
+    container_name: ear-mcp-svn
+    ports:
+      - "3003:3000"
+    environment:
+      SVN_URL: svn://svn/test-repo
+      SVN_USER: ${SVN_USER:-developer}
+      SVN_PASSWORD: ${SVN_PASSWORD:-svn_secret}
+    depends_on:
+      svn:
+        condition: service_healthy
+
+  mcp-graphify:
+    <<: *mcp-defaults
+    build:
+      context: .
+      dockerfile: services/mcp-graphify/Dockerfile
+    container_name: ear-mcp-graphify
+    ports:
+      - "3004:3000"
+    environment:
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-graphify_secret}
+    depends_on:
+      neo4j:
+        condition: service_healthy
+
+  mcp-orchestrator:
+    <<: *mcp-defaults
+    build:
+      context: .
+      dockerfile: services/mcp-orchestrator/Dockerfile
+    container_name: ear-mcp-orchestrator
+    ports:
+      - "3005:3000"
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_USER: ${JENKINS_USER:-admin}
+      JENKINS_TOKEN: ${JENKINS_TOKEN}
+      JIRA_URL: http://jira:8080
+      JIRA_USER: ${JIRA_USER:-admin}
+      JIRA_TOKEN: ${JIRA_TOKEN}
+      JIRA_PROJECT: EAR
+      SVN_URL: svn://svn/test-repo
+      SVN_USER: ${SVN_USER:-developer}
+      SVN_PASSWORD: ${SVN_PASSWORD:-svn_secret}
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${NEO4J_PASSWORD:-graphify_secret}
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      svn:
+        condition: service_healthy
+
+volumes:
+  jenkins_home:
+  jira_home:
+  jira_db_data:
+  svn_repos:
+  neo4j_data:
+
+networks:
+  mcp-net:
+    driver: bridge

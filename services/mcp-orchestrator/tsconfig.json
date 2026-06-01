@@ -1,0 +1,26 @@
+{
+  "comment": "Runtime via tsx (cross-package source imports). Paths map the shared lib; tsx applies these globally.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@ear-build/shared": ["../../shared/src/index.ts"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "../../orchestrator/**/*",
+    "../mcp-jenkins/src/**/*",
+    "../mcp-jira/src/**/*",
+    "../mcp-svn/src/**/*",
+    "../mcp-graphify/src/**/*"
+  ]
+}

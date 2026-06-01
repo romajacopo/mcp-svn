@@ -1,0 +1,59 @@
+{
+  "mcpServers": {
+    "mcp-jenkins": {
+      "command": "node",
+      "args": ["services/mcp-jenkins/dist/index.js"],
+      "env": {
+        "JENKINS_URL": "http://localhost:8080",
+        "JENKINS_USER": "admin",
+        "JENKINS_TOKEN": "${JENKINS_TOKEN}"
+      }
+    },
+    "mcp-jira": {
+      "command": "node",
+      "args": ["services/mcp-jira/dist/index.js"],
+      "env": {
+        "JIRA_URL": "http://localhost:8090",
+        "JIRA_USER": "admin",
+        "JIRA_TOKEN": "${JIRA_TOKEN}"
+      }
+    },
+    "mcp-svn": {
+      "command": "node",
+      "args": ["services/mcp-svn/dist/index.js"],
+      "env": {
+        "SVN_URL": "svn://localhost/test-repo",
+        "SVN_USER": "developer",
+        "SVN_PASSWORD": "${SVN_PASSWORD}"
+      }
+    },
+    "mcp-graphify": {
+      "command": "node",
+      "args": ["services/mcp-graphify/dist/index.js"],
+      "env": {
+        "NEO4J_URI": "bolt://localhost:7687",
+        "NEO4J_USER": "neo4j",
+        "NEO4J_PASSWORD": "${NEO4J_PASSWORD}"
+      }
+    },
+    "mcp-orchestrator": {
+      "command": "npx",
+      "args": ["tsx", "services/mcp-orchestrator/src/index.ts"],
+      "env": {
+        "JENKINS_URL": "http://localhost:8080",
+        "JENKINS_USER": "admin",
+        "JENKINS_TOKEN": "${JENKINS_TOKEN}",
+        "JIRA_URL": "http://localhost:8090",
+        "JIRA_USER": "admin",
+        "JIRA_TOKEN": "${JIRA_TOKEN}",
+        "JIRA_PROJECT": "EAR",
+        "SVN_URL": "svn://localhost/test-repo",
+        "SVN_USER": "developer",
+        "SVN_PASSWORD": "${SVN_PASSWORD}",
+        "NEO4J_URI": "bolt://localhost:7687",
+        "NEO4J_USER": "neo4j",
+        "NEO4J_PASSWORD": "${NEO4J_PASSWORD}"
+      }
+    }
+  }
+}
